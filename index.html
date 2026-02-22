@@ -6,11 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>용해도 가상 실험실</title>
     
-    <!-- 1. 필수 라이브러리 로드 (CDN) -->
+    <!-- 필수 라이브러리 로드 (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 화면 캡처용 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
       @keyframes spin-slow {
@@ -20,28 +22,34 @@
       .animate-spin-slow {
         animation: spin-slow 3s linear infinite;
       }
+      /* 넘버 인풋 화살표 숨기기 */
+      input[type=number]::-webkit-inner-spin-button, 
+      input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+      }
+      input[type=number] {
+        -moz-appearance: textfield;
+      }
+      /* 디지털 폰트 느낌 */
+      @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+      .font-digital {
+        font-family: 'Share Tech Mono', monospace;
+      }
     </style>
   </head>
-  <body>
-    <!-- React 앱이 들어갈 곳 -->
+  <body class="bg-gray-50 min-h-screen">
     <div id="root"></div>
 
-    <!-- React 코드 시작 -->
     <script type="text/babel">
       const { useState, useEffect } = React;
 
-      // --- 아이콘 컴포넌트 직접 정의 (오류 방지용) ---
+      // --- 아이콘 컴포넌트 ---
       const IconBase = ({ size = 24, className = "", children }) => (
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
-          width={size} 
-          height={size} 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
+          width={size} height={size} viewBox="0 0 24 24" fill="none" 
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
           className={className}
         >
           {children}
@@ -49,97 +57,78 @@
       );
 
       const Beaker = (props) => (
-        <IconBase {...props}>
-          <path d="M4.5 3h15" /><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3" /><path d="M6 14h12" />
-        </IconBase>
+        <IconBase {...props}><path d="M4.5 3h15" /><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3" /><path d="M6 14h12" /></IconBase>
       );
       const Thermometer = (props) => (
-        <IconBase {...props}>
-          <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
-        </IconBase>
+        <IconBase {...props}><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" /></IconBase>
       );
       const Flame = (props) => (
-        <IconBase {...props}>
-          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.5-3.3.3-1.09.8-2.1 1.5-3.2.5 1.1 1 2.2 1.5 3.3.5 1.1 1 2.2 1.5 3.3z" />
-        </IconBase>
+        <IconBase {...props}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.5-3.3.3-1.09.8-2.1 1.5-3.2.5 1.1 1 2.2 1.5 3.3.5 1.1 1 2.2 1.5 3.3z" /></IconBase>
       );
       const Snowflake = (props) => (
-        <IconBase {...props}>
-          <line x1="2" x2="22" y1="12" y2="12" /><line x1="12" x2="12" y1="2" y2="22" /><path d="m20 16-4-4 4-4" /><path d="m4 8 4 4-4 4" /><path d="m16 4-4 4-4-4" /><path d="m8 20 4-4 4 4" />
-        </IconBase>
+        <IconBase {...props}><line x1="2" x2="22" y1="12" y2="12" /><line x1="12" x2="12" y1="2" y2="22" /><path d="m20 16-4-4 4-4" /><path d="m4 8 4 4-4 4" /><path d="m16 4-4 4-4-4" /><path d="m8 20 4-4 4 4" /></IconBase>
       );
       const RefreshCw = (props) => (
-        <IconBase {...props}>
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />
-        </IconBase>
+        <IconBase {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></IconBase>
       );
       const CheckCircle = (props) => (
-        <IconBase {...props}>
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-        </IconBase>
+        <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></IconBase>
       );
       const AlertCircle = (props) => (
-        <IconBase {...props}>
-          <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />
-        </IconBase>
-      );
-      const HelpCircle = (props) => (
-        <IconBase {...props}>
-          <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" />
-        </IconBase>
+        <IconBase {...props}><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></IconBase>
       );
       const Scale = (props) => (
-        <IconBase {...props}>
-           <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
-        </IconBase>
+        <IconBase {...props}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></IconBase>
       );
       const Trophy = (props) => (
-        <IconBase {...props}>
-          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17" /><path d="M14 14.66V17" /><path d="M18 2a2 2 0 0 1 2 2v2a6 6 0 0 1-5 5.5l-3 1.5-3-1.5A6 6 0 0 1 4 6V4a2 2 0 0 1 2-2z" /><path d="M10 22v-5" /><path d="M14 22v-5" />
-        </IconBase>
+        <IconBase {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17" /><path d="M14 14.66V17" /><path d="M18 2a2 2 0 0 1 2 2v2a6 6 0 0 1-5 5.5l-3 1.5-3-1.5A6 6 0 0 1 4 6V4a2 2 0 0 1 2-2z" /><path d="M10 22v-5" /><path d="M14 22v-5" /></IconBase>
+      );
+      const Camera = (props) => (
+        <IconBase {...props}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></IconBase>
       );
 
-      // --- 기존 실험실 코드 (내용 변경 없음) ---
       const App = () => {
         // --- 상태 관리 ---
-        const [temp, setTemp] = useState(20); // 현재 온도
-        // 투입량 고정 (A: 60g, B: 10g)
+        const [temp, setTemp] = useState(20);
         const [massA] = useState(60); 
         const [massB] = useState(10); 
         
         const [simState, setSimState] = useState('setup'); // setup, heating, cooling, challenge
-        const [challengeMessage, setChallengeMessage] = useState(null); // 도전 결과 메시지
+        const [challengeMessage, setChallengeMessage] = useState(null);
+        const [essayText, setEssayText] = useState("");
 
         // --- 물리 상수 및 계산 로직 ---
-        // 물질 A: 온도에 따른 용해도 변화가 큼
         const getSolubilityA = (t) => Math.round(10 + 0.012 * t * t + 0.4 * t);
-
-        // 물질 B: 온도에 따른 용해도 변화가 작음 (수정됨: 10~12도 부근부터 석출되도록 설정)
-        // 10도일 때 약 9g 녹음 -> 1g 석출
-        // 13도일 때 약 10.2g 녹음 -> 모두 녹음
         const getSolubilityB = (t) => Math.round(5 + 0.4 * t);
 
-        // 현재 온도에서의 용해도 및 석출량 계산
         const solA = getSolubilityA(temp);
         const solB = getSolubilityB(temp);
 
         const precipitatedA = Math.max(0, massA - solA);
         const precipitatedB = Math.max(0, massB - solB);
         
-        // 총 석출량
         const totalPrecipitate = precipitatedA + precipitatedB;
-        const isCloudy = totalPrecipitate > 0;
 
         // --- 핸들러 ---
-        const handleTempChange = (e) => {
+        const handleTempSlider = (e) => {
           setTemp(Number(e.target.value));
-          setChallengeMessage(null); // 온도 변경 시 메시지 초기화
+          setChallengeMessage(null);
+        };
+
+        const handleTempInput = (e) => {
+          let val = parseInt(e.target.value, 10);
+          if (isNaN(val)) val = 0;
+          if (val < 0) val = 0;
+          if (val > 80) val = 80;
+          setTemp(val);
+          setChallengeMessage(null);
         };
         
         const startExperiment = () => {
           setSimState('heating');
           setTemp(20);
           setChallengeMessage(null);
+          setEssayText("");
         };
 
         const heatUp = () => {
@@ -156,7 +145,6 @@
         };
 
         const checkOptimalTemp = () => {
-          // 최적 온도 판별 로직
           if (precipitatedB > 0) {
             setChallengeMessage({
               type: 'fail',
@@ -168,10 +156,8 @@
               text: '아직 아무것도 석출되지 않았습니다. 온도를 낮춰보세요.'
             });
           } else {
-            // B가 나오기 직전 온도(약 12~13도)가 최적
-            const solB_next = getSolubilityB(temp - 1); // 1도 더 낮췄을 때
+            const solB_next = getSolubilityB(temp - 1);
             if (10 > solB_next) {
-              // 1도 더 낮추면 B가 나옴 -> 현재가 최적!
               setChallengeMessage({
                 type: 'success',
                 text: `성공! 순수한 물질 A를 최대로 얻을 수 있는 최적의 온도입니다. (A: ${precipitatedA}g 획득)`
@@ -194,21 +180,45 @@
           setTemp(20);
           setSimState('setup');
           setChallengeMessage(null);
+          setEssayText("");
         };
 
-        // --- 렌더링 헬퍼: 비커 시각화 ---
+        const handleCapture = async () => {
+          const element = document.getElementById('capture-area');
+          if (!element) return;
+          try {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const canvas = await html2canvas(element, { 
+              scale: 2,
+              backgroundColor: "#f9fafb" 
+            });
+            const image = canvas.toDataURL("image/png");
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = '분별결정실험_보고서.png';
+            link.click();
+          } catch (err) {
+            console.error("Capture failed", err);
+            alert("화면 캡처 중 오류가 발생했습니다.");
+          }
+        };
+
+        // --- 렌더링 헬퍼: 비커 & 디지털 온도계 ---
         const renderBeaker = () => {
           const solidHeight = Math.min(80, totalPrecipitate * 1.5);
-
           return (
-            <div className="relative w-48 h-64 mx-auto mt-4">
-              {/* Beaker Glass */}
-              <div className="absolute bottom-0 w-full h-56 border-x-4 border-b-4 border-gray-300 rounded-b-xl bg-blue-50 bg-opacity-30 overflow-hidden backdrop-blur-sm shadow-xl">
-                
-                {/* Water Level */}
-                <div className="absolute bottom-0 w-full h-48 bg-blue-200 bg-opacity-40 transition-all duration-500"></div>
+            <div className="relative w-48 h-64 mx-auto mt-8">
+              {/* 디지털 온도계 */}
+              <div className="absolute right-2 -top-12 flex flex-col items-center z-20">
+                <div className="bg-gray-800 text-green-400 font-digital text-lg px-3 py-1.5 rounded-md shadow-lg border-2 border-gray-600 flex items-center justify-center min-w-[70px]">
+                  {temp.toFixed(1)}<span className="text-xs ml-1">°C</span>
+                </div>
+                <div className="w-2 h-44 bg-gradient-to-r from-gray-300 to-gray-400 border-x border-gray-500 rounded-b-full shadow-inner z-10"></div>
+              </div>
 
-                {/* Precipitate */}
+              {/* 비커 본체 */}
+              <div className="absolute bottom-0 w-full h-56 border-x-4 border-b-4 border-gray-300 rounded-b-xl bg-blue-50 bg-opacity-30 overflow-hidden backdrop-blur-sm shadow-xl z-0">
+                <div className="absolute bottom-0 w-full h-48 bg-blue-200 bg-opacity-40 transition-all duration-500"></div>
                 {totalPrecipitate > 0 && (
                   <div 
                     className={`absolute bottom-0 w-full opacity-90 transition-all duration-500 flex items-end justify-center border-t ${precipitatedB > 0 ? 'bg-purple-100' : 'bg-white'}`}
@@ -222,53 +232,97 @@
                     </div>
                   </div>
                 )}
-
-                {/* Temperature Effect */}
                 {temp > 80 && <div className="absolute inset-0 bg-red-500 mix-blend-overlay opacity-20 animate-pulse"></div>}
               </div>
               
-              {/* Thermometer Overlay */}
-              <div className="absolute -right-4 top-10 flex flex-col items-center">
-                  <Thermometer size={24} className={temp > 50 ? "text-red-500" : "text-blue-500"} />
-                  <span className="text-xs font-bold mt-1">{Math.round(temp)}°C</span>
-              </div>
-
-              {/* Flame/Ice Icon */}
-              <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
-                  {simState === 'heating' && <Flame className="text-orange-500 animate-bounce" size={32} />}
-                  {simState === 'cooling' && <Snowflake className="text-blue-400 animate-spin-slow" size={32} />}
-                  {simState === 'challenge' && <Trophy className="text-yellow-500 animate-bounce" size={32} />}
+              {/* 가열/냉각 효과 아이콘 */}
+              <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2">
+                  {simState === 'heating' && <Flame className="text-orange-500 animate-bounce" size={36} />}
+                  {simState === 'cooling' && <Snowflake className="text-blue-400 animate-spin-slow" size={36} />}
+                  {simState === 'challenge' && <Trophy className="text-yellow-500 animate-bounce" size={36} />}
               </div>
             </div>
           );
         };
 
+        // --- 렌더링 헬퍼: 그래프 ---
+        const renderGraph = () => {
+          const width = 300;
+          const height = 200;
+          const padding = 30;
+          const graphWidth = width - padding * 2;
+          const graphHeight = height - padding * 2;
+
+          const maxTemp = 80;
+          const maxSol = 120; 
+
+          const getX = (t) => padding + (t / maxTemp) * graphWidth;
+          const getY = (s) => height - padding - (s / maxSol) * graphHeight;
+
+          let pathA = `M ${getX(0)} ${getY(getSolubilityA(0))}`;
+          let pathB = `M ${getX(0)} ${getY(getSolubilityB(0))}`;
+
+          for (let t = 1; t <= maxTemp; t++) {
+            pathA += ` L ${getX(t)} ${getY(getSolubilityA(t))}`;
+            pathB += ` L ${getX(t)} ${getY(getSolubilityB(t))}`;
+          }
+
+          return (
+            <svg width={width} height={height} className="bg-white border border-gray-200 rounded-md">
+              <line x1={padding} y1={height - padding} x2={width - padding + 10} y2={height - padding} stroke="#cbd5e1" strokeWidth="2" />
+              <line x1={padding} y1={padding - 10} x2={padding} y2={height - padding} stroke="#cbd5e1" strokeWidth="2" />
+
+              <text x={width / 2} y={height - 5} fontSize="11" fill="#475569" textAnchor="middle">온도 (°C)</text>
+              <text x={12} y={height / 2} fontSize="11" fill="#475569" textAnchor="middle" transform={`rotate(-90 12 ${height/2})`}>용해도</text>
+
+              {[0, 20, 40, 60, 80].map(t => (
+                <g key={`xtick-${t}`}>
+                  <line x1={getX(t)} y1={height - padding} x2={getX(t)} y2={height - padding + 4} stroke="#cbd5e1" />
+                  <text x={getX(t)} y={height - padding + 14} fontSize="9" fill="#64748b" textAnchor="middle">{t}</text>
+                </g>
+              ))}
+
+              {[0, 40, 80, 120].map(s => (
+                <g key={`ytick-${s}`}>
+                  <line x1={padding - 4} y1={getY(s)} x2={padding} y2={getY(s)} stroke="#cbd5e1" />
+                  <text x={padding - 6} y={getY(s) + 3} fontSize="9" fill="#64748b" textAnchor="end">{s}</text>
+                </g>
+              ))}
+
+              <path d={pathA} fill="none" stroke="#2563eb" strokeWidth="2.5" />
+              <path d={pathB} fill="none" stroke="#ef4444" strokeWidth="2.5" />
+              
+              <circle cx={getX(temp)} cy={getY(getSolubilityA(temp))} r="3" fill="#1d4ed8" />
+              <circle cx={getX(temp)} cy={getY(getSolubilityB(temp))} r="3" fill="#b91c1c" />
+              <line x1={getX(temp)} y1={height - padding} x2={getX(temp)} y2={padding - 10} stroke="#94a3b8" strokeDasharray="4" strokeWidth="1" />
+            </svg>
+          );
+        };
+
         return (
-          <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
-            <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-4 md:p-8 font-sans">
+            <div id="capture-area" className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden mb-6 p-2">
               
               {/* Header */}
-              <header className="bg-indigo-600 text-white p-6 flex items-center justify-between">
+              <header className="bg-indigo-600 text-white p-6 rounded-t-xl flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2">
                     <Beaker /> 가상 실험실: 용해도 차이를 이용한 분리
                   </h1>
-                  <p className="text-indigo-100 text-sm mt-1">순수한 물질을 얻기 위한 최적의 온도 찾기</p>
+                  <p className="text-indigo-100 text-sm mt-1">분별 결정(Fractional Crystallization)을 활용하여 순수한 물질 얻기</p>
                 </div>
                 <button 
                   onClick={reset}
-                  className="flex items-center gap-1 bg-indigo-700 hover:bg-indigo-800 px-4 py-2 rounded-lg transition-colors text-sm"
+                  className="flex items-center gap-1 bg-indigo-700 hover:bg-indigo-800 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
                 >
                   <RefreshCw size={16} /> 실험 다시하기
                 </button>
               </header>
 
-              <main className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-8 p-6">
+              <main className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-8 p-6 pb-2">
                 
                 {/* Left Panel: Controls */}
                 <div className="lg:col-span-1 space-y-6">
-                  
-                  {/* Step Indicator */}
                   <div className="bg-gray-100 rounded-xl p-4">
                     <h3 className="text-sm font-bold text-gray-500 uppercase mb-3">실험 단계</h3>
                     <div className="flex justify-between items-center text-xs text-center">
@@ -280,47 +334,35 @@
                     </div>
                   </div>
 
-                  {/* Controls */}
                   <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-6">
-                    
-                    {/* Material Info */}
                     <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
                       <div className="text-gray-500 text-xs font-bold uppercase mb-2 flex items-center gap-1">
-                          <Scale size={12}/> 실험 조건 (고정됨)
+                          <Scale size={12}/> 실험 조건 (초기 투입량)
                       </div>
                       <div className="space-y-3">
                           <div className="flex justify-between items-center bg-white p-2 rounded border border-gray-200">
                               <span className="font-bold text-blue-600 flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                                  물질 A
+                                  <span className="w-2 h-2 rounded-full bg-blue-600"></span> 물질 A
                               </span>
                               <span className="font-mono font-bold text-gray-700">{massA}g</span>
                           </div>
                           <div className="flex justify-between items-center bg-white p-2 rounded border border-gray-200">
                               <span className="font-bold text-red-500 flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                                  물질 B (불순물)
+                                  <span className="w-2 h-2 rounded-full bg-red-500"></span> 물질 B (불순물)
                               </span>
                               <span className="font-mono font-bold text-gray-700">{massB}g</span>
                           </div>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
                     {simState === 'setup' && (
-                      <button 
-                        onClick={startExperiment}
-                        className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center gap-2"
-                      >
+                      <button onClick={startExperiment} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center gap-2">
                         <Flame size={18} /> 실험 시작 (가열하기)
                       </button>
                     )}
 
                     {simState === 'heating' && (
-                      <button 
-                        onClick={heatUp}
-                        className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition shadow-lg flex justify-center items-center gap-2 animate-pulse"
-                      >
+                      <button onClick={heatUp} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition shadow-lg flex justify-center items-center gap-2 animate-pulse">
                         <Flame size={18} /> 80°C까지 가열하여 녹이기
                       </button>
                     )}
@@ -331,41 +373,48 @@
                           <label className="block text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
                             <Thermometer size={16}/> 온도 조절기
                           </label>
-                          <input 
-                            type="range" min="0" max="80" step="1" value={temp} 
-                            onChange={handleTempChange}
-                            className="w-full accent-blue-500 cursor-pointer"
-                          />
+                          
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="range" min="0" max="80" step="1" value={temp} 
+                              onChange={handleTempSlider}
+                              className="flex-1 accent-blue-500 cursor-pointer"
+                            />
+                            <div className="flex items-center bg-white border border-blue-300 rounded overflow-hidden">
+                              <input 
+                                type="number" min="0" max="80" value={Math.round(temp)} 
+                                onChange={handleTempInput}
+                                className="w-12 py-1 text-center font-bold text-blue-800 focus:outline-none"
+                              />
+                              <span className="pr-2 text-blue-600 text-sm font-bold">°C</span>
+                            </div>
+                          </div>
                           <div className="flex justify-between text-xs text-blue-600 mt-1 font-mono">
                             <span>0°C</span>
-                            <span>{Math.round(temp)}°C</span>
                             <span>80°C</span>
                           </div>
                         </div>
                         
                         <div className="text-xs text-gray-600 bg-gray-100 p-3 rounded">
-                          온도를 낮추며 A가 먼저 나오는지 관찰하세요.<br/>
-                          <span className="text-red-500 font-bold">주의:</span> 너무 낮추면 B도 함께 나옵니다!
+                          온도를 천천히 낮추며 A가 먼저 석출되는지 관찰하세요.<br/>
+                          <span className="text-red-500 font-bold">주의:</span> 온도를 너무 낮추면 B도 함께 석출됩니다!
                         </div>
                       </div>
                     )}
-
                   </div>
                 </div>
 
                 {/* Center Panel: Visualization */}
                 <div className="lg:col-span-1 flex flex-col items-center justify-start pt-4">
-                  <div className="bg-gradient-to-b from-gray-50 to-white w-full rounded-2xl border border-gray-200 p-6 min-h-[400px] flex flex-col items-center relative shadow-inner">
+                  <div className="bg-gradient-to-b from-gray-50 to-white w-full rounded-2xl border border-gray-200 p-6 pb-12 min-h-[400px] flex flex-col items-center relative shadow-inner">
                       <h2 className="text-lg font-bold text-gray-700 mb-2">실험 관찰</h2>
-                      
                       {renderBeaker()}
-
-                      <div className="mt-8 w-full grid grid-cols-2 gap-2 text-sm">
-                        <div className="bg-white p-2 rounded shadow-sm border border-gray-100">
+                      <div className="mt-12 w-full grid grid-cols-2 gap-2 text-sm z-10 relative">
+                        <div className="bg-white p-2 rounded shadow-sm border border-gray-100 text-center">
                           <div className="text-gray-500 text-xs">현재 온도</div>
-                          <div className="font-bold text-xl text-gray-800">{temp}°C</div>
+                          <div className="font-digital font-bold text-xl text-gray-800">{temp.toFixed(1)}°C</div>
                         </div>
-                        <div className="bg-white p-2 rounded shadow-sm border border-gray-100">
+                        <div className="bg-white p-2 rounded shadow-sm border border-gray-100 text-center">
                           <div className="text-gray-500 text-xs">총 석출량</div>
                           <div className={`font-bold text-xl ${totalPrecipitate > 0 ? 'text-indigo-600' : 'text-gray-400'}`}>
                             {totalPrecipitate.toFixed(1)}g
@@ -373,25 +422,22 @@
                         </div>
                       </div>
 
-                      {/* 석출 상태 메시지 (수정됨) */}
                       <div className="mt-4 text-center h-12 w-full flex items-center justify-center">
                         {precipitatedA > 0 && precipitatedB > 0 ? (
-                          <div className="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg font-bold animate-pulse text-sm border border-purple-200 shadow-sm">
+                          <div className="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg font-bold animate-pulse text-sm border border-purple-200 shadow-sm z-10 relative">
                             <AlertCircle size={16} className="inline mr-1 mb-0.5"/>
                             비커 바닥에 <br/>물질A와 물질B가 동시에 석출되었습니다!
                           </div>
                         ) : precipitatedA > 0 ? (
-                          <div className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold animate-pulse border border-blue-200 shadow-sm">
+                          <div className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold animate-pulse border border-blue-200 shadow-sm z-10 relative">
                             비커 바닥에 물질A가 석출되었습니다!
                           </div>
                         ) : precipitatedB > 0 ? (
-                          <div className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-bold animate-pulse border border-red-200 shadow-sm">
+                          <div className="bg-red-100 text-red-700 px-4 py-2 rounded-lg font-bold animate-pulse border border-red-200 shadow-sm z-10 relative">
                             비커 바닥에 물질B가 석출되었습니다!
                           </div>
                         ) : (
-                          <div className="text-gray-400 text-sm">
-                            현재 모든 물질이 녹아있습니다.
-                          </div>
+                          <div className="text-gray-400 text-sm z-10 relative">현재 모든 물질이 녹아있습니다.</div>
                         )}
                       </div>
                   </div>
@@ -399,17 +445,15 @@
 
                 {/* Right Panel: Challenge */}
                 <div className="lg:col-span-1 space-y-4">
-                  
-                  {/* Challenge Section */}
                   {(simState === 'cooling' || simState === 'challenge') && (
                     <div className="bg-yellow-50 rounded-xl p-5 border border-yellow-100 shadow-sm">
                       <h3 className="font-bold text-yellow-800 mb-3 flex items-center gap-2">
                         <Trophy size={18} /> 미션: 순수 분리하기
                       </h3>
                       <p className="text-sm text-yellow-900 mb-4 leading-relaxed">
-                        불순물(B)은 녹아있고, <br/>
+                        불순물(B)은 계속 녹아있고, <br/>
                         순수한 <strong>물질 A만 가장 많이</strong> 얻을 수 있는 <br/>
-                        최저 온도를 찾아보세요!
+                        최적의 온도를 찾아 결정을 분리해보세요!
                       </p>
                       
                       <div className="flex flex-col gap-3">
@@ -417,10 +461,9 @@
                           onClick={checkOptimalTemp}
                           className="w-full bg-yellow-400 text-yellow-900 py-3 rounded-lg font-bold hover:bg-yellow-500 transition shadow-sm flex justify-center items-center gap-2"
                         >
-                          이 온도에서 분리하기!
+                          이 온도에서 분리 진행하기
                         </button>
                         
-                        {/* 결과 피드백 메시지 */}
                         {challengeMessage && (
                           <div className={`p-3 rounded-lg text-sm flex items-start gap-2 border ${
                             challengeMessage.type === 'success' ? 'bg-green-100 text-green-800 border-green-200' :
@@ -436,30 +479,95 @@
                     </div>
                   )}
 
-                  {/* Instruction Text */}
                   <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm text-sm text-gray-700">
                     <strong className="block mb-2 text-lg border-b pb-2">💡 실험 목표</strong>
                     <ul className="list-disc pl-4 space-y-2">
-                      <li>
-                        온도를 천천히 낮추며 <strong>어떤 물질이 먼저 나오는지</strong> 관찰하세요. (보통 60도 부근에서 A가 나오기 시작합니다)
-                      </li>
-                      <li>
-                        온도가 너무 낮아지면(10도 부근) <strong>물질 B도 나오기 시작</strong>합니다.
-                      </li>
-                      <li>
-                        B가 나오기 직전까지 온도를 낮춰 <strong>순수한 A를 최대로</strong> 얻어보세요.
-                      </li>
+                      <li>온도를 서서히 낮추며 <strong>어떤 물질의 결정이 먼저 생성되는지</strong> 관찰합니다.</li>
+                      <li>온도를 너무 과도하게 낮추면 용해도가 떨어진 <strong>물질 B도 함께 석출</strong>되므로 주의합니다.</li>
+                      <li>B가 석출되기 직전의 최적 온도를 찾아 <strong>순수한 A를 최대로</strong> 분리해냅니다.</li>
                     </ul>
                   </div>
-
                 </div>
+
+                {/* 분리 성공 시 표시되는 분석 및 보고서 영역 (Full Width) */}
+                {challengeMessage?.type === 'success' && (
+                  <div className="lg:col-span-3 mt-4 mb-4 bg-green-50 border-2 border-green-200 rounded-xl p-6 shadow-md">
+                    <h2 className="text-xl font-bold text-green-800 mb-6 flex items-center gap-2">
+                        <CheckCircle className="text-green-600" /> 실험 성공! 결과 데이터 및 보고서 작성
+                    </h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* 좌측: 그래프와 표 */}
+                      <div className="bg-white p-4 rounded-xl border border-gray-200">
+                        <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">📊 온도에 따른 용해도 데이터 분석</h3>
+                        
+                        <div className="flex flex-col items-center mb-6">
+                          {renderGraph()}
+                          <div className="flex gap-4 mt-3 text-sm">
+                            <span className="flex items-center gap-1 font-bold text-blue-600"><span className="w-3 h-1 bg-blue-600 inline-block"></span> 물질 A (용해도 차이 큼)</span>
+                            <span className="flex items-center gap-1 font-bold text-red-500"><span className="w-3 h-1 bg-red-500 inline-block"></span> 물질 B (용해도 차이 작음)</span>
+                          </div>
+                        </div>
+
+                        <table className="w-full text-sm text-center border-collapse border border-gray-200">
+                          <thead>
+                            <tr className="bg-gray-100">
+                                <th className="border border-gray-200 p-2 text-gray-700">온도(°C)</th>
+                                <th className="border border-gray-200 p-2 text-blue-600">물질 A 용해도</th>
+                                <th className="border border-gray-200 p-2 text-red-500">물질 B 용해도</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[0, 20, 40, 60, 80].map(t => (
+                              <tr key={t} className="hover:bg-gray-50">
+                                <td className="border border-gray-200 p-2 font-mono">{t}</td>
+                                <td className="border border-gray-200 p-2 font-mono">{getSolubilityA(t)}</td>
+                                <td className="border border-gray-200 p-2 font-mono">{getSolubilityB(t)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <p className="text-[10px] text-gray-400 mt-1 text-right">* 단위: g/물 100g</p>
+                      </div>
+
+                      {/* 우측: 서술형 작성 및 캡처 */}
+                      <div className="flex flex-col bg-white p-4 rounded-xl border border-gray-200">
+                        <h3 className="font-bold text-gray-700 mb-2 border-b pb-2">📝 분리 원리 서술하기 (분별 결정)</h3>
+                        <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+                          위 그래프와 표를 참고하여, <strong>온도에 따른 용해도 차이가 큰 두 물질을 어떻게 분리할 수 있는지</strong> 그 원리를 자세히 작성해보세요.
+                        </p>
+                        
+                        <textarea
+                          className="flex-1 w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none leading-relaxed text-gray-700 bg-gray-50"
+                          placeholder="작성 예시: 온도에 따른 용해도 변화가 큰 물질 A와 변화가 작은 물질 B가 섞여 있을 때, 고온의 용매에 두 물질을 모두 녹인 후 혼합 용액을 서서히 냉각시킵니다. 그러면 용해도가 급격히 감소하는 물질 A가 먼저 결정으로 석출되며..."
+                          value={essayText}
+                          onChange={(e) => setEssayText(e.target.value)}
+                        ></textarea>
+
+                        <button 
+                          onClick={handleCapture}
+                          className="mt-4 w-full bg-slate-800 text-white py-3 rounded-lg font-bold hover:bg-slate-900 transition flex justify-center items-center gap-2 shadow-md"
+                        >
+                          <Camera size={18} /> 보고서 및 결과 화면 캡처하기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </main>
             </div>
+            {/* 캡처 영역 끝 */}
+
+            {/* 저작권 및 연락처 Footer */}
+            <footer className="text-center text-gray-400 text-sm mt-8 pb-4">
+              <p>&copy; 2026 과학체육관. All rights reserved.</p>
+              <p className="text-xs mt-1">이 가상 실험실 콘텐츠의 무단 복제 및 배포를 금합니다.</p>
+              <p className="text-xs mt-1">문의: chuseonjae@outlook.kr | 인스타: @sweat_on_science, @songsamscience</p>
+            </footer>
           </div>
         );
       };
 
-      // React 앱 렌더링
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<App />);
     </script>
