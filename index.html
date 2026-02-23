@@ -90,12 +90,25 @@
       const App = () => {
         // --- 상태 관리 ---
         const [temp, setTemp] = useState(20);
-        const [massA] = useState(60); 
-        const [massB] = useState(10); 
+        // 학생마다 랜덤한 양을 제공하기 위한 State 설정
+        const [massA, setMassA] = useState(60); 
+        const [massB, setMassB] = useState(10); 
         
         const [simState, setSimState] = useState('setup'); // setup, heating, cooling, challenge
         const [challengeMessage, setChallengeMessage] = useState(null);
         const [essayText, setEssayText] = useState("");
+
+        // 시작 시 랜덤 질량 생성 (A: 60~110g, B: 10~30g)
+        useEffect(() => {
+          generateRandomMass();
+        }, []);
+
+        const generateRandomMass = () => {
+          const rA = Math.floor(Math.random() * (110 - 60 + 1)) + 60;
+          const rB = Math.floor(Math.random() * (30 - 10 + 1)) + 10;
+          setMassA(rA);
+          setMassB(rB);
+        };
 
         // --- 물리 상수 및 계산 로직 ---
         const getSolubilityA = (t) => Math.round(10 + 0.012 * t * t + 0.4 * t);
@@ -156,16 +169,17 @@
               text: '아직 아무것도 석출되지 않았습니다. 온도를 낮춰보세요.'
             });
           } else {
+            // 현재 주어진 massB(물질 B 양)에 맞춰 분리 시점을 동적으로 계산
             const solB_next = getSolubilityB(temp - 1);
-            if (10 > solB_next) {
+            if (massB > solB_next) {
               setChallengeMessage({
                 type: 'success',
-                text: `성공! 순수한 물질 A를 최대로 얻을 수 있는 최적의 온도입니다. (A: ${precipitatedA}g 획득)`
+                text: `성공! 순수한 물질 A를 최대로 얻을 수 있는 최적의 온도(${temp}°C)를 찾았습니다! (순수 A: ${precipitatedA}g 획득)`
               });
-            } else if (10 > getSolubilityB(temp - 3)) {
+            } else if (massB > getSolubilityB(temp - 3)) {
               setChallengeMessage({
                 type: 'warning',
-                text: '순수한 A만 나왔지만, 온도를 조금 더 낮추면 A를 더 많이 얻을 수 있을 것 같아요!'
+                text: '순수한 A만 나왔지만, 온도를 조금 더 낮추면 불순물 없이 A를 더 많이 얻을 수 있을 것 같아요!'
               });
             } else {
               setChallengeMessage({
@@ -181,6 +195,7 @@
           setSimState('setup');
           setChallengeMessage(null);
           setEssayText("");
+          generateRandomMass(); // 다시 할 때마다 새로운 실험 환경 구성
         };
 
         const handleCapture = async () => {
@@ -315,7 +330,7 @@
                   onClick={reset}
                   className="flex items-center gap-1 bg-indigo-700 hover:bg-indigo-800 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
                 >
-                  <RefreshCw size={16} /> 실험 다시하기
+                  <RefreshCw size={16} /> 실험 다시하기 (조건 리셋)
                 </button>
               </header>
 
@@ -337,18 +352,24 @@
                   <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-6">
                     <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
                       <div className="text-gray-500 text-xs font-bold uppercase mb-2 flex items-center gap-1">
-                          <Scale size={12}/> 실험 조건 (초기 투입량)
+                          <Scale size={12}/> 실험 조건 (랜덤 지정됨)
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
+                          <div className="flex justify-between items-center bg-white p-2 rounded border border-gray-200 mb-1">
+                              <span className="font-bold text-cyan-600 flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-cyan-400"></span> 용매 (물)
+                              </span>
+                              <span className="font-mono font-bold text-gray-700">100g</span>
+                          </div>
                           <div className="flex justify-between items-center bg-white p-2 rounded border border-gray-200">
                               <span className="font-bold text-blue-600 flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full bg-blue-600"></span> 물질 A
+                                  <span className="w-2 h-2 rounded-full bg-blue-600"></span> 물질 A (초기 투입량)
                               </span>
                               <span className="font-mono font-bold text-gray-700">{massA}g</span>
                           </div>
                           <div className="flex justify-between items-center bg-white p-2 rounded border border-gray-200">
                               <span className="font-bold text-red-500 flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full bg-red-500"></span> 물질 B (불순물)
+                                  <span className="w-2 h-2 rounded-full bg-red-500"></span> 물질 B (초기 투입량)
                               </span>
                               <span className="font-mono font-bold text-gray-700">{massB}g</span>
                           </div>
@@ -357,13 +378,13 @@
 
                     {simState === 'setup' && (
                       <button onClick={startExperiment} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg flex justify-center items-center gap-2">
-                        <Flame size={18} /> 실험 시작 (가열하기)
+                        <Flame size={18} /> 혼합물 가열하기
                       </button>
                     )}
 
                     {simState === 'heating' && (
                       <button onClick={heatUp} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold hover:bg-orange-600 transition shadow-lg flex justify-center items-center gap-2 animate-pulse">
-                        <Flame size={18} /> 80°C까지 가열하여 녹이기
+                        <Flame size={18} /> 80°C까지 가열하여 전부 녹이기
                       </button>
                     )}
 
@@ -396,8 +417,8 @@
                         </div>
                         
                         <div className="text-xs text-gray-600 bg-gray-100 p-3 rounded">
-                          온도를 천천히 낮추며 A가 먼저 석출되는지 관찰하세요.<br/>
-                          <span className="text-red-500 font-bold">주의:</span> 온도를 너무 낮추면 B도 함께 석출됩니다!
+                          온도를 천천히 낮추며 어떤 변화가 일어나는지 관찰하세요.<br/>
+                          <span className="text-red-500 font-bold">주의:</span> 온도를 너무 낮추면 불순물 B도 함께 석출됩니다!
                         </div>
                       </div>
                     )}
@@ -437,7 +458,7 @@
                             비커 바닥에 물질B가 석출되었습니다!
                           </div>
                         ) : (
-                          <div className="text-gray-400 text-sm z-10 relative">현재 모든 물질이 녹아있습니다.</div>
+                          <div className="text-gray-400 text-sm z-10 relative">현재 모든 물질이 100g의 물에 녹아있습니다.</div>
                         )}
                       </div>
                   </div>
@@ -499,7 +520,7 @@
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {/* 좌측: 그래프와 표 */}
                       <div className="bg-white p-4 rounded-xl border border-gray-200">
-                        <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">📊 온도에 따른 용해도 데이터 분석</h3>
+                        <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">📊 온도에 따른 용해량 데이터 분석</h3>
                         
                         <div className="flex flex-col items-center mb-6">
                           {renderGraph()}
@@ -527,19 +548,19 @@
                             ))}
                           </tbody>
                         </table>
-                        <p className="text-[10px] text-gray-400 mt-1 text-right">* 단위: g/물 100g</p>
+                        <p className="text-[10px] text-gray-400 mt-1 text-right">* 단위: g / 물 100g</p>
                       </div>
 
                       {/* 우측: 서술형 작성 및 캡처 */}
                       <div className="flex flex-col bg-white p-4 rounded-xl border border-gray-200">
                         <h3 className="font-bold text-gray-700 mb-2 border-b pb-2">📝 분리 원리 서술하기 (분별 결정)</h3>
                         <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                          위 그래프와 표를 참고하여, <strong>온도에 따른 용해도 차이가 큰 두 물질을 어떻게 분리할 수 있는지</strong> 그 원리를 자세히 작성해보세요.
+                          위 그래프와 표를 참고하여, <strong>온도에 따른 용해도 변화 차이를 이용해 두 혼합 물질을 어떻게 분리할 수 있는지</strong> 그 원리를 자세히 작성해보세요.
                         </p>
                         
                         <textarea
                           className="flex-1 w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none leading-relaxed text-gray-700 bg-gray-50"
-                          placeholder="작성 예시: 온도에 따른 용해도 변화가 큰 물질 A와 변화가 작은 물질 B가 섞여 있을 때, 고온의 용매에 두 물질을 모두 녹인 후 혼합 용액을 서서히 냉각시킵니다. 그러면 용해도가 급격히 감소하는 물질 A가 먼저 결정으로 석출되며..."
+                          placeholder="작성 예시: 온도에 따른 용해도 변화가 큰 물질 A와 변화가 작은 물질 B가 물 100g에 섞여 있을 때, 고온으로 가열하여 모두 녹인 후 서서히 냉각시킵니다. 그러면 용해도가 급격히 감소하는 물질 A가 먼저 결정으로 석출되며..."
                           value={essayText}
                           onChange={(e) => setEssayText(e.target.value)}
                         ></textarea>
